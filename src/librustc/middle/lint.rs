@@ -1096,7 +1096,7 @@ fn check_item_non_camel_case_types(cx: &Context, it: &ast::Item) {
 
         // start with a non-lowercase letter rather than non-uppercase
         // ones (some scripts don't have a concept of upper/lowercase)
-        !ident.char_at(0).is_lowercase() && !ident.contains_char('_')
+        !ident.char_at(0).is_lower() && !ident.contains_char('_')
     }
 
     fn check_case(cx: &Context, sort: &str, ident: ast::Ident, span: Span) {
@@ -1133,7 +1133,7 @@ fn check_item_non_uppercase_statics(cx: &Context, it: &ast::Item) {
             // check for lowercase letters rather than non-uppercase
             // ones (some scripts don't have a concept of
             // upper/lowercase)
-            if s.get().chars().any(|c| c.is_lowercase()) {
+            if s.get().chars().any(|c| c.is_lower()) {
                 cx.span_lint(NonUppercaseStatics, it.span,
                              "static constant should have an uppercase identifier");
             }
@@ -1150,7 +1150,7 @@ fn check_pat_non_uppercase_statics(cx: &Context, p: &ast::Pat) {
             // last identifier alone is right choice for this lint.
             let ident = path.segments.last().unwrap().identifier;
             let s = token::get_ident(ident);
-            if s.get().chars().any(|c| c.is_lowercase()) {
+            if s.get().chars().any(|c| c.is_lower()) {
                 cx.span_lint(NonUppercasePatternStatics, path.span,
                              "static constant in pattern should be all caps");
             }

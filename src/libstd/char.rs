@@ -90,14 +90,14 @@ pub fn is_XID_continue(c: char) -> bool { derived_property::XID_Continue(c) }
 /// in terms of the Unicode Derived Core Property 'Lowercase'.
 ///
 #[inline]
-pub fn is_lowercase(c: char) -> bool { derived_property::Lowercase(c) }
+pub fn is_lower(c: char) -> bool { derived_property::Lowercase(c) }
 
 ///
 /// Indicates whether a character is in upper case, defined
 /// in terms of the Unicode Derived Core Property 'Uppercase'.
 ///
 #[inline]
-pub fn is_uppercase(c: char) -> bool { derived_property::Uppercase(c) }
+pub fn is_upper(c: char) -> bool { derived_property::Uppercase(c) }
 
 ///
 /// Indicates whether a character is whitespace. Whitespace is defined in
@@ -204,7 +204,7 @@ pub fn to_digit(c: char, radix: uint) -> Option<uint> {
 ///
 /// Returns the char itself if no conversion if possible
 #[inline]
-pub fn to_uppercase(c: char) -> char {
+pub fn to_upper(c: char) -> char {
     conversions::to_upper(c)
 }
 
@@ -217,7 +217,7 @@ pub fn to_uppercase(c: char) -> char {
 ///
 /// Returns the char itself if no conversion if possible
 #[inline]
-pub fn to_lowercase(c: char) -> char {
+pub fn to_lower(c: char) -> char {
     conversions::to_lower(c)
 }
 
@@ -373,16 +373,16 @@ pub trait Char {
     fn is_alphabetic(&self) -> bool;
     fn is_XID_start(&self) -> bool;
     fn is_XID_continue(&self) -> bool;
-    fn is_lowercase(&self) -> bool;
-    fn is_uppercase(&self) -> bool;
+    fn is_lower(&self) -> bool;
+    fn is_upper(&self) -> bool;
     fn is_whitespace(&self) -> bool;
     fn is_alphanumeric(&self) -> bool;
     fn is_control(&self) -> bool;
     fn is_digit(&self) -> bool;
     fn is_digit_radix(&self, radix: uint) -> bool;
     fn to_digit(&self, radix: uint) -> Option<uint>;
-    fn to_lowercase(&self) -> char;
-    fn to_uppercase(&self) -> char;
+    fn to_lower(&self) -> char;
+    fn to_upper(&self) -> char;
     fn from_digit(num: uint, radix: uint) -> Option<char>;
     fn escape_unicode(&self, f: |char|);
     fn escape_default(&self, f: |char|);
@@ -402,9 +402,9 @@ impl Char for char {
 
     fn is_XID_continue(&self) -> bool { is_XID_continue(*self) }
 
-    fn is_lowercase(&self) -> bool { is_lowercase(*self) }
+    fn is_lower(&self) -> bool { is_lower(*self) }
 
-    fn is_uppercase(&self) -> bool { is_uppercase(*self) }
+    fn is_upper(&self) -> bool { is_upper(*self) }
 
     fn is_whitespace(&self) -> bool { is_whitespace(*self) }
 
@@ -418,9 +418,9 @@ impl Char for char {
 
     fn to_digit(&self, radix: uint) -> Option<uint> { to_digit(*self, radix) }
 
-    fn to_lowercase(&self) -> char { to_lowercase(*self) }
+    fn to_lower(&self) -> char { to_lower(*self) }
 
-    fn to_uppercase(&self) -> char { to_uppercase(*self) }
+    fn to_upper(&self) -> char { to_upper(*self) }
 
     fn from_digit(num: uint, radix: uint) -> Option<char> { from_digit(num, radix) }
 
@@ -473,21 +473,21 @@ impl Default for char {
 }
 
 #[test]
-fn test_is_lowercase() {
-    assert!('a'.is_lowercase());
-    assert!('ö'.is_lowercase());
-    assert!('ß'.is_lowercase());
-    assert!(!'Ü'.is_lowercase());
-    assert!(!'P'.is_lowercase());
+fn test_is_lower() {
+    assert!('a'.is_lower());
+    assert!('ö'.is_lower());
+    assert!('ß'.is_lower());
+    assert!(!'Ü'.is_lower());
+    assert!(!'P'.is_lower());
 }
 
 #[test]
-fn test_is_uppercase() {
-    assert!(!'h'.is_uppercase());
-    assert!(!'ä'.is_uppercase());
-    assert!(!'ß'.is_uppercase());
-    assert!('Ö'.is_uppercase());
-    assert!('T'.is_uppercase());
+fn test_is_upper() {
+    assert!(!'h'.is_upper());
+    assert!(!'ä'.is_upper());
+    assert!(!'ß'.is_upper());
+    assert!('Ö'.is_upper());
+    assert!('T'.is_upper());
 }
 
 #[test]
@@ -518,36 +518,36 @@ fn test_to_digit() {
 }
 
 #[test]
-fn test_to_lowercase() {
-    assert_eq!('A'.to_lowercase(), 'a');
-    assert_eq!('Ö'.to_lowercase(), 'ö');
-    assert_eq!('ß'.to_lowercase(), 'ß');
-    assert_eq!('Ü'.to_lowercase(), 'ü');
-    assert_eq!('💩'.to_lowercase(), '💩');
-    assert_eq!('Σ'.to_lowercase(), 'σ');
-    assert_eq!('Τ'.to_lowercase(), 'τ');
-    assert_eq!('Ι'.to_lowercase(), 'ι');
-    assert_eq!('Γ'.to_lowercase(), 'γ');
-    assert_eq!('Μ'.to_lowercase(), 'μ');
-    assert_eq!('Α'.to_lowercase(), 'α');
-    assert_eq!('Σ'.to_lowercase(), 'σ');
+fn test_to_lower() {
+    assert_eq!('A'.to_lower(), 'a');
+    assert_eq!('Ö'.to_lower(), 'ö');
+    assert_eq!('ß'.to_lower(), 'ß');
+    assert_eq!('Ü'.to_lower(), 'ü');
+    assert_eq!('💩'.to_lower(), '💩');
+    assert_eq!('Σ'.to_lower(), 'σ');
+    assert_eq!('Τ'.to_lower(), 'τ');
+    assert_eq!('Ι'.to_lower(), 'ι');
+    assert_eq!('Γ'.to_lower(), 'γ');
+    assert_eq!('Μ'.to_lower(), 'μ');
+    assert_eq!('Α'.to_lower(), 'α');
+    assert_eq!('Σ'.to_lower(), 'σ');
 }
 
 #[test]
-fn test_to_uppercase() {
-    assert_eq!('a'.to_uppercase(), 'A');
-    assert_eq!('ö'.to_uppercase(), 'Ö');
-    assert_eq!('ß'.to_uppercase(), 'ß'); // not ẞ: Latin capital letter sharp s
-    assert_eq!('ü'.to_uppercase(), 'Ü');
-    assert_eq!('💩'.to_uppercase(), '💩');
+fn test_to_upper() {
+    assert_eq!('a'.to_upper(), 'A');
+    assert_eq!('ö'.to_upper(), 'Ö');
+    assert_eq!('ß'.to_upper(), 'ß'); // not ẞ: Latin capital letter sharp s
+    assert_eq!('ü'.to_upper(), 'Ü');
+    assert_eq!('💩'.to_upper(), '💩');
 
-    assert_eq!('σ'.to_uppercase(), 'Σ');
-    assert_eq!('τ'.to_uppercase(), 'Τ');
-    assert_eq!('ι'.to_uppercase(), 'Ι');
-    assert_eq!('γ'.to_uppercase(), 'Γ');
-    assert_eq!('μ'.to_uppercase(), 'Μ');
-    assert_eq!('α'.to_uppercase(), 'Α');
-    assert_eq!('ς'.to_uppercase(), 'Σ');
+    assert_eq!('σ'.to_upper(), 'Σ');
+    assert_eq!('τ'.to_upper(), 'Τ');
+    assert_eq!('ι'.to_upper(), 'Ι');
+    assert_eq!('γ'.to_upper(), 'Γ');
+    assert_eq!('μ'.to_upper(), 'Μ');
+    assert_eq!('α'.to_upper(), 'Α');
+    assert_eq!('ς'.to_upper(), 'Σ');
 }
 
 #[test]
