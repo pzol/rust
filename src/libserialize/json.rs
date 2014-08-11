@@ -1991,9 +1991,8 @@ impl ::Decoder<DecoderError> for Decoder {
 
         let value = match obj.pop(&name.to_string()) {
             None => {
-                let err = Err(MissingFieldError(name.to_string()));
-                self.stack.push(err);
-                return Err(MissingFieldError(name.to_string()));
+                self.stack.push(Err(MissingFieldError(name.to_string())));
+                try!(f(self))
             },
             Some(json) => {
                 self.stack.push(Ok(json));
