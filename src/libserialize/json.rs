@@ -1801,18 +1801,18 @@ pub fn from_str(s: &str) -> Result<Json, BuilderError> {
 
 /// A structure to decode JSON to values in rust.
 pub struct Decoder {
-    stack: Vec<Json>,
+    stack: Vec<DecodeResult<Json>>,
 }
 
 impl Decoder {
     /// Creates a new decoder instance for decoding the specified JSON value.
     pub fn new(json: Json) -> Decoder {
-        Decoder { stack: vec![json] }
+        Decoder { stack: vec![Ok(json)] }
     }
 }
 
 impl Decoder {
-    fn pop(&mut self) -> Json {
+    fn pop(&mut self) -> DecodeResult<Json> {
         self.stack.pop().unwrap()
     }
 }
@@ -1820,18 +1820,20 @@ impl Decoder {
 macro_rules! expect(
     ($e:expr, Null) => ({
         match $e {
-            Null => Ok(()),
-            other => Err(ExpectedError("Null".to_string(),
-                                       format!("{}", other)))
+            Ok(Null) => Ok(()),
+            Ok(other) => Err(ExpectedError("Null".to_string(),
+                                       format!("{}", other))),
+            Err(e) => Err(e)
         }
     });
     ($e:expr, $t:ident) => ({
         match $e {
-            $t(v) => Ok(v),
-            other => {
+            Ok($t(v)) => Ok(v),
+            Ok(other) => {
                 Err(ExpectedError(stringify!($t).to_string(),
                                   format!("{}", other)))
-            }
+            },
+            Err(e) => Err(e)
         }
     })
 )
@@ -1861,7 +1863,7 @@ impl ::Decoder<DecoderError> for Decoder {
 
     fn read_f64(&mut self) -> DecodeResult<f64> {
         debug!("read_f64");
-        match self.pop() {
+        match try!(self.pop()) {
             Number(f) => Ok(f),
             String(s) => {
                 // re: #12967.. a type w/ numeric keys (ie HashMap<uint, V> etc)
@@ -1905,7 +1907,7 @@ impl ::Decoder<DecoderError> for Decoder {
                             f: |&mut Decoder, uint| -> DecodeResult<T>)
                             -> DecodeResult<T> {
         debug!("read_enum_variant(names={})", names);
-        let name = match self.pop() {
+        let name = match try!(self.pop()) {
             String(s) => s,
             Object(mut o) => {
                 let n = match o.pop(&"variant".to_string()) {
@@ -1920,7 +1922,7 @@ impl ::Decoder<DecoderError> for Decoder {
                 match o.pop(&"fields".to_string()) {
                     Some(List(l)) => {
                         for field in l.move_iter().rev() {
-                            self.stack.push(field);
+                            self.stack.push(Ok(field));
                         }
                     },
                     Some(val) => {
@@ -1988,13 +1990,17 @@ impl ::Decoder<DecoderError> for Decoder {
         let mut obj = try!(expect!(self.pop(), Object));
 
         let value = match obj.pop(&name.to_string()) {
-            None => return Err(MissingFieldError(name.to_string())),
+            None => {
+                let err = Err(MissingFieldError(name.to_string()));
+                self.stack.push(err);
+                return Err(MissingFieldError(name.to_string()));
+            },
             Some(json) => {
-                self.stack.push(json);
+                self.stack.push(Ok(json));
                 try!(f(self))
             }
         };
-        self.stack.push(Object(obj));
+        self.stack.push(Ok(Object(obj)));
         Ok(value)
     }
 
@@ -2028,8 +2034,10 @@ impl ::Decoder<DecoderError> for Decoder {
 
     fn read_option<T>(&mut self, f: |&mut Decoder, bool| -> DecodeResult<T>) -> DecodeResult<T> {
         match self.pop() {
-            Null => f(self, false),
-            value => { self.stack.push(value); f(self, true) }
+            Ok(Null) => f(self, false),
+            Err(MissingFieldError(_)) => f(self, false),
+            Ok(value) => { self.stack.push(Ok(value)); f(self, true) },
+            Err(e) => Err(e)
         }
     }
 
@@ -2038,7 +2046,7 @@ impl ::Decoder<DecoderError> for Decoder {
         let list = try!(expect!(self.pop(), List));
         let len = list.len();
         for v in list.move_iter().rev() {
-            self.stack.push(v);
+            self.stack.push(Ok(v));
         }
         f(self, len)
     }
@@ -2055,8 +2063,8 @@ impl ::Decoder<DecoderError> for Decoder {
         let obj = try!(expect!(self.pop(), Object));
         let len = obj.len();
         for (key, value) in obj.move_iter() {
-            self.stack.push(value);
-            self.stack.push(String(key));
+            self.stack.push(Ok(value));
+            self.stack.push(Ok(String(key)));
         }
         f(self, len)
     }
@@ -2932,6 +2940,35 @@ mod tests {
         let json_null = json_value.as_null();
         let expected_null = ();
         assert!(json_null.is_some() && json_null.unwrap() == expected_null);
+    }
+
+    #[test]
+    fn test_missing_field() {
+        #[deriving(PartialEq, Show)]
+        struct Foo {
+            bar: u32
+        }
+
+        impl <D: ::Decoder<E>, E> Decodable<D, E> for Foo {
+            fn decode(d: &mut D) -> Result<Foo, E> {
+                d.read_struct("Foo", 1u, |d|
+                    Ok(Foo{
+                        bar: match d.read_struct_field("bar", 0u, |d| Decodable::decode(d))
+                           {
+                               Ok(bar) => bar,
+                               Err(_) => 0u32
+                           }
+                       }
+                    )
+                )
+            }
+        }
+
+        let json_object = from_str("{}").unwrap();
+        let mut decoder = Decoder::new(json_object);
+
+        let actual : Foo = Decodable::decode(&mut decoder).unwrap();
+        assert_eq!(actual, Foo { bar: 0 });
     }
 
     #[test]
